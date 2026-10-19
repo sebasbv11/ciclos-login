@@ -1,0 +1,8 @@
+{
+  "name": "ciclos-login-laboratorio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Practica local: HTTP en texto claro y login sin limite de intentos",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}

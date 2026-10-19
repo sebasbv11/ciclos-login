@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ciclos · Laboratorio de acceso</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #162a40; background: #eef3f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; }
+    header { padding: 24px max(24px, calc((100vw - 1000px)/2)); background: white; border-bottom: 1px solid #dce4ec; font-weight: 800; letter-spacing: 2px; }
+    header span { color: #66788b; font-size: 12px; letter-spacing: 0; margin-left: 12px; font-weight: 500; }
+    main { max-width: 1000px; margin: 70px auto; padding: 0 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+    .eyebrow { color: #2464a4; font-size: 12px; font-weight: 750; letter-spacing: 2px; }
+    h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.12; margin: 18px 0; letter-spacing: -1.8px; }
+    p { line-height: 1.65; color: #5c6e80; }
+    .tag { display: inline-block; background: #dce9f6; padding: 7px 12px; border-radius: 20px; font-size: 12px; margin-top: 12px; }
+    .card { background: white; border: 1px solid #dae3ed; border-radius: 20px; padding: 32px; box-shadow: 0 14px 40px #18344d0a; }
+    h2 { margin: 0 0 8px; font-size: 24px; }
+    .intro { margin: 0 0 26px; font-size: 14px; }
+    label { display: block; margin: 18px 0 8px; font-size: 14px; font-weight: 650; }
+    input { width: 100%; padding: 13px; font: inherit; border: 1px solid #bfccd9; border-radius: 8px; }
+    input:focus { outline: 3px solid #d9eaff; border-color: #2768ac; }
+    button { width: 100%; background: #205d9b; color: white; border: 0; border-radius: 8px; padding: 14px; margin-top: 24px; cursor: pointer; font: inherit; font-weight: 650; }
+    button:hover { background: #174b7f; }
+    .note { margin-top: 22px; padding: 12px; background: #f3f6fa; border-radius: 8px; font-size: 12px; color: #62748a; line-height: 1.7; }
+    #message { min-height: 24px; font-size: 13px; color: #a62e2e; margin: 14px 0 0; }
+    [hidden] { display: none !important; }
+    .success { color: #207652; font-size: 12px; font-weight: 700; }
+    .activity { border-top: 1px solid #e2e9ef; padding-top: 16px; }
+    footer { max-width: 1000px; margin: 0 auto; padding: 24px; color: #748497; font-size: 12px; }
+    @media (max-width: 700px) { main { grid-template-columns: 1fr; margin: 32px auto; gap: 28px; } .card { padding: 24px; } }
+  </style>
+</head>
+<body>
+  <header>CICLOS<span>Proyecto académico</span></header>
+  <main>
+    <section>
+      <div class="eyebrow">LABORATORIO 01 / ACCESO</div>
+      <h1>Un pequeño portal.<br>Dos vulnerabilidades.</h1>
+      <p>Práctica de seguridad para observar cómo viajan las credenciales y qué ocurre cuando un inicio de sesión permite intentos ilimitados.</p>
+      <span class="tag">Entorno local · Datos ficticios</span>
+    </section>
+    <section class="card" aria-label="Portal de estudiantes">
+      <div id="login">
+        <h2>Iniciar sesión</h2>
+        <p class="intro">Accede al portal de estudiantes.</p>
+        <form id="form">
+          <label for="username">Usuario</label>
+          <input id="username" name="username" autocomplete="username" placeholder="Tu usuario" required>
+          <label for="password">Contraseña</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Tu contraseña" required>
+          <button type="submit">Entrar al portal →</button>
+        </form>
+        <p id="message" role="status" aria-live="polite"></p>
+        <div class="note">Cuenta de prueba<br><strong>estudiante</strong> / <strong>ciclos123</strong><br>Intentos realizados en esta página: <span id="attempts">0</span></div>
+      </div>
+      <div id="dashboard" hidden>
+        <p class="success">● SESIÓN INICIADA</p>
+        <h2>Hola, estudiante.</h2>
+        <p>Bienvenido a tu portal de Ciclos.</p>
+        <div class="activity"><strong>Actividad de la materia</strong><p>Identifica las dos vulnerabilidades, guarda evidencia y explica cómo corregirlas.</p></div>
+        <button id="logout" type="button">Cerrar sesión</button>
+      </div>
+    </section>
+  </main>
+  <footer>Laboratorio deliberadamente vulnerable. Usa únicamente las credenciales de prueba.</footer>
+  <script>
+    let attempts = 0;
+    const login = document.getElementById('login');
+    const dashboard = document.getElementById('dashboard');
+    const message = document.getElementById('message');
+    function showSession(active) { login.hidden = active; dashboard.hidden = !active; }
+    fetch('/api/session').then(r => r.json()).then(data => showSession(data.authenticated)).catch(() => { message.textContent = 'No se pudo conectar con el servidor.'; });
+    document.getElementById('form').addEventListener('submit', async event => {
+      event.preventDefault();
+      document.getElementById('attempts').textContent = ++attempts;
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: document.getElementById('username').value, password: document.getElementById('password').value })
+        });
+        const result = await response.json();
+        message.textContent = response.ok ? '' : result.message;
+        if (response.ok) { document.getElementById('password').value = ''; showSession(true); }
+      } catch { message.textContent = 'No se pudo conectar con el servidor.'; }
+    });
+    document.getElementById('logout').addEventListener('click', async () => {
+      try {
+        const response = await fetch('/api/logout', { method: 'POST' });
+        if (!response.ok) throw new Error();
+        showSession(false);
+      } catch { alert('No se pudo cerrar la sesión. Intenta de nuevo.'); }
+    });
+  </script>
+</body>
+</html>
