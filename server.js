@@ -20,23 +20,8 @@ function json(res, status, data, headers = {}) {
   res.end(JSON.stringify(data));
 }
 
-const server = https.createServer({ ...tlsOptions, minVersion: 'TLSv1.2' }, async (req, res) => {
-  res.setHeader('Cache-Control', 'no-store');
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; frame-ancestors 'none'");
-  const token = (req.headers.cookie || '').split(';').map(v => v.trim()).find(v => v.startsWith('session='))?.slice(8);
-  const expires = sessions.get(token);
-  const authenticated = expires && expires > now();
-  if (expires && !authenticated) sessions.delete(token);
-
-  if (req.method === 'GET' && req.url === '/') {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    return res.end(page);
-  }
-  if (req.method === 'GET' && req.url === '/api/session') {
-    return json(res, 200, { authenticated: Boolean(authenticated), user: authenticated ? 'estudiante' : null });
-  }
-  if (req.method === 'POST' && req.url === '/api/login') {
+// El manejador verifica el limite antes de leer credenciales o autenticar.
+async function handleLogin(req, res, token) {
     // CORRECCION 2: maximo cinco solicitudes de login por IP en un minuto.
     // No confiamos en X-Forwarded-For: el cliente no puede cambiar la clave.
     const client = req.socket.remoteAddress;
@@ -77,6 +62,31 @@ const server = https.createServer({ ...tlsOptions, minVersion: 'TLSv1.2' }, asyn
     } catch {
       return json(res, 400, { message: 'Solicitud no válida.' });
     }
+}
+
+// La ruta publica solo puede acceder al manejador protegido.
+const routes = new Map([
+  ['POST /api/login', handleLogin]
+]);
+
+const server = https.createServer({ ...tlsOptions, minVersion: 'TLSv1.2' }, async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; frame-ancestors 'none'");
+  const token = (req.headers.cookie || '').split(';').map(v => v.trim()).find(v => v.startsWith('session='))?.slice(8);
+  const expires = sessions.get(token);
+  const authenticated = expires && expires > now();
+  if (expires && !authenticated) sessions.delete(token);
+
+  const handler = routes.get(`${req.method} ${req.url}`);
+  if (handler) return handler(req, res, token);
+
+  if (req.method === 'GET' && req.url === '/') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    return res.end(page);
+  }
+  if (req.method === 'GET' && req.url === '/api/session') {
+    return json(res, 200, { authenticated: Boolean(authenticated), user: authenticated ? 'estudiante' : null });
   }
   if (req.method === 'POST' && req.url === '/api/logout') {
     sessions.delete(token);
