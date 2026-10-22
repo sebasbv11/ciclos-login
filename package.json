@@ -2,7 +2,14 @@
   "name": "ciclos-login-laboratorio",
   "version": "1.0.0",
   "private": true,
-  "description": "Practica local: HTTP en texto claro y login sin limite de intentos",
-  "scripts": { "start": "node server.js" },
+  "description": "Practica de Ciclos corregida: HTTPS y limite de intentos de login",
+  "scripts": {
+    "start": "node server.js",
+    "certs": "node scripts/certs.cjs",
+    "test": "node --test tests/security.test.cjs",
+    "semgrep": "node scripts/semgrep.cjs scan",
+    "semgrep:test": "node scripts/semgrep.cjs test",
+    "semgrep:check": "node scripts/semgrep.cjs scan --error"
+  },
   "engines": { "node": ">=18" }
 }

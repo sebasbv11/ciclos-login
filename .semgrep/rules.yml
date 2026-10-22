@@ -1,0 +1,32 @@
+rules:
+  - id: ciclos-http-sin-tls
+    languages: [javascript]
+    severity: ERROR
+    message: >-
+      Se crea un servidor HTTP sin TLS. En este laboratorio el login recibe
+      credenciales por ese servidor y viajan en texto claro. Usar HTTPS.
+    metadata:
+      category: security
+      cwe: 'CWE-319: Cleartext Transmission of Sensitive Information'
+      confidence: HIGH
+    patterns:
+      - pattern-inside: |
+          const $HTTP = require('node:http');
+          ...
+      - pattern: $HTTP.createServer(...)
+
+  - id: ciclos-login-revisar-limites
+    languages: [javascript]
+    severity: WARNING
+    message: >-
+      Ruta de login identificada: revisar limites de intentos, esperas y bloqueo
+      temporal. Esta regla marca un punto de auditoria; no demuestra por si sola
+      que falte una proteccion externa o implementada en otra funcion.
+    metadata:
+      category: security
+      cwe: 'CWE-307: Improper Restriction of Excessive Authentication Attempts'
+      confidence: LOW
+    pattern: |
+      if ($REQ.method === 'POST' && $REQ.url === '/api/login') {
+        ...
+      }

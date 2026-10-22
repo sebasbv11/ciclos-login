@@ -1,0 +1,7 @@
+node_modules/
+reports/
+.venv/
+*.log
+.env
+.env.*
+certs/
